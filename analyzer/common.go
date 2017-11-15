@@ -9,7 +9,8 @@ func importName(threshold int, text string) (importName string) {
 	if hasAlias {
 		importName = values[len(values)-2]
 	} else {
-		values = strings.Split(values[len(values)-1], "/")
+		packageName := findPackageName(values[len(values)-1])
+		values = strings.Split(packageName, "/")
 		importName = values[len(values)-1]
 	}
 
