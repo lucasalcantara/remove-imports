@@ -1,29 +1,19 @@
 package main
 
 import (
-	"fmt"
-	"github.com/stretchr/testify/assert"
 	"log"
 	"os"
 	util "test_util"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-var (
-	filesPath  = "test_util/files/"
-	fileToTest = []struct {
-		name           string
-		code           string
-		expectedResult string
-		errorMessage   string
-	}{
-		{"no_remove_import_necessary.go", util.FileAllImportsUsing, util.FileAllImportsUsing, "the code in file %s is not equals of the expected result."},
-		{"remove_import_necessary.go", util.FileRemoveImport, util.FileRemoveImportExpected, "the code in file %s is not equals of the expected result."},
-		{"import_necessary_with_comment.go", util.FileRemoveImportWithComments, util.FileRemoveImportWithCommentsExpected, "the code in file %s is not equals of the expected result."},
-	}
-)
+var filesPath = "test_util/files/"
 
 func setup() {
+	initParallelism()
+
 	err := os.MkdirAll(filesPath, 0777)
 	if err != nil {
 		log.Panic(err)
@@ -38,21 +28,26 @@ func TestMain(m *testing.M) {
 	os.Exit(run)
 }
 
-func TestImports(t *testing.T) {
-	for _, file := range fileToTest {
-		path := filesPath + file.name
-		util.CreateFile(file.code, path)
-	}
+func TestWithoutRemoveImports(t *testing.T) {
+	execute("without_remove_imports.go", util.FileAllImportsUsing, util.FileAllImportsUsing, t)
+}
 
-	initParallelism()
+func TestRemovingImports(t *testing.T) {
+	execute("remove_import_necessary.go", util.FileRemoveImport, util.FileRemoveImportExpected, t)
+}
+
+func TestRemovingImportsWithCommentsInCode(t *testing.T) {
+	execute("with_comment.go", util.FileRemoveImportWithComments, util.FileRemoveImportWithCommentsExpected, t)
+}
+
+func execute(fileName, codeToFile, ExpectedCode string, t *testing.T) {
+	path := filesPath + fileName
+	util.CreateFile(codeToFile, path)
+
 	analyzeDirectory(filesPath)
 
 	wg.Wait()
 
-	for _, file := range fileToTest {
-		path := filesPath + file.name
-		result := util.ReadFile(path)
-
-		assert.Equal(t, result, file.expectedResult, fmt.Sprintf(file.errorMessage, file.name))
-	}
+	result := util.ReadFile(path)
+	assert.Equal(t, result, ExpectedCode)
 }
